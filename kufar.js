@@ -9,7 +9,7 @@ const main = async () => {
     // console.log(data);
     
     // filter today only ads
-    const todayOnly = data.filter((item) => item.date.includes('Вчера'));
+    const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
     console.log(todayOnly);
     // console.log(idsCache.getTodayKey());
     // console.log(idsCache.getCache());

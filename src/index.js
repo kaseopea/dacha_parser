@@ -56,7 +56,7 @@ bot.on("message", async (msg) => {
     // Set up new interval for messages
     const intervalId = setInterval(async () => {
       const data = await kufar.getLatestAds();
-      const todayOnly = data.filter((item) => item.date.includes('Вчера'));
+      const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
       const sendToday = [];
 
       todayOnly.forEach((ad) => {
