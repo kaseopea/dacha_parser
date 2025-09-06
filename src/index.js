@@ -50,7 +50,7 @@ bot.on('message', async (msg) => {
         const intervalId = setInterval(async() => {
             const ads = await kufar.getLatestAds();
             bot.sendMessage(chatId, `This is your automated message every 10 minutes! Send /stop to cancel. ${ads}`);
-        }, 1 * 1000); // 10 * 60 * 1000 10 minutes in milliseconds
+        }, 3 * 1000); // 10 * 60 * 1000 10 minutes in milliseconds
 
         // Store the interval ID
         activeTimers.set(chatId, intervalId);

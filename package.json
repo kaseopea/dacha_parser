@@ -8,14 +8,21 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "kufar:test": "node kufar.js",
+    "kufar:test:watch": "nodemon kufar.js"
   },
   "author": "Vitali Rusau",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.11.0",
+    "cheerio": "^1.1.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "node-telegram-bot-api": "^0.66.0"
+    "node-telegram-bot-api": "^0.66.0",
+    "puppeteer": "^24.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
