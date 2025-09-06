@@ -5,13 +5,20 @@ const axios = require("axios");
 const kufar = require("./lib/kufar/index");
 const IDSCache = require("./lib/cache/index");
 
+const MESSAGES = {
+  pwdQuestion: "Кто здесь?",
+  messageGranted: "Привет! Проверка каждые 10 мин. Отправь /stop чтобы остановить обновление.",
+  startMessage: "Автоматические сообщения остановлены. Отправь /start чтобы начать снова",
+  noActive: "Нет активных сообщений для остановки",
+}
+
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 4040;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_BOT_PWD = process.env.TELEGRAM_BOT_PWD;
-const PARSE_MODE = 'MarkdownV2';
+const PARSE_MODE = 'HTML';
 
 // Cache
 const idsCache = new IDSCache();
@@ -28,7 +35,7 @@ const activeTimers = new Map();
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, "Who's there?");
+  bot.sendMessage(chatId, MESSAGES.pwdQuestion);
 });
 
 // Handle text messages
@@ -45,7 +52,7 @@ bot.on("message", async (msg) => {
   if (text.toLowerCase() === TELEGRAM_BOT_PWD) {
     bot.sendMessage(
       chatId,
-      "Access granted! You'll receive messages every 10 minutes. Send /stop to cancel."
+      MESSAGES.messageGranted
     );
 
     // Clear any existing timer for this user
@@ -56,15 +63,15 @@ bot.on("message", async (msg) => {
     // Set up new interval for messages
     const intervalId = setInterval(async () => {
       const data = await kufar.getLatestAds();
-      const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
+      const todayOnly = data.filter((item) => item.date.includes('Вчера'));
       const sendToday = [];
 
       todayOnly.forEach((ad) => {
         if (!idsCache.hasString(ad.id)) {
-          bot.sendMessage(chatId, `Sending. ${ad.id} \n\r
-            *${ad.price}* \n\r
-            [Объявление](${ad.href})
-        `, {
+          bot.sendMessage(chatId, `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
+<b>${ad.date} / ${ad.price}</b>
+<blockquote>${ad.body}</blockquote>
+<a href="${ad.href}">Объявление ${ad.id}</a>`, {
             parse_mode: PARSE_MODE,
           });
           sendToday.push(ad.id);
@@ -94,10 +101,10 @@ bot.onText(/\/stop/, (msg) => {
     activeTimers.delete(chatId);
     bot.sendMessage(
       chatId,
-      "Automated messages stopped. Send /start to begin again."
+      MESSAGES.startMessage
     );
   } else {
-    bot.sendMessage(chatId, "No active automated messages to stop.");
+    bot.sendMessage(chatId, MESSAGES.noActive);
   }
 });
 
