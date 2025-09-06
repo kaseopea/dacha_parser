@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Dach Ads Bot",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
