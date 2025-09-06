@@ -37,9 +37,6 @@ module.exports = {
 
     await browser.close();
 
-    // filter data
-    const filteredData = data.filter((item) => item.date.includes("Сегодня"));
-
-    return filteredData;
+    return data;
   },
 };
