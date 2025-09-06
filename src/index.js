@@ -79,13 +79,13 @@ bot.on("message", async (msg) => {
         }
       });
 
-      if (sendToday.length) {
-        bot.sendMessage(
-          chatId,
-          `Send ${sendToday.length} ads. /stop to cancel. `
-        );
-      }
-    }, 3 * 1000); // 10 * 60 * 1000 10 minutes in milliseconds
+      // if (sendToday.length) {
+      //   bot.sendMessage(
+      //     chatId,
+      //     `Send ${sendToday.length} ads. /stop to cancel. `
+      //   );
+      // }
+    }, 10 * 60 * 1000); // 10 minutes in milliseconds
 
     // Store the interval ID
     activeTimers.set(chatId, intervalId);
