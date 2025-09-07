@@ -2,17 +2,9 @@ const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios");
 
-const kufar = require("./lib/kufar/index");
+const MESSAGES = require("./config/messages");
 const IDSCache = require("./lib/cache/index");
-
-const MESSAGES = {
-  pwdQuestion: "Кто здесь?",
-  messageGranted:
-    "Привет! Проверка каждые 10 мин. Отправь /stop чтобы остановить обновление.",
-  startMessage:
-    "Автоматические сообщения остановлены. Отправь /start чтобы начать снова",
-  noActive: "Нет активных сообщений для остановки",
-};
+const App = require("./app");
 
 require("dotenv").config();
 
@@ -21,6 +13,8 @@ const PORT = process.env.PORT || 4040;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_BOT_PWD = process.env.TELEGRAM_BOT_PWD;
 const PARSE_MODE = "HTML";
+const LISTEN_INTERVAL_TEST = 30 * 1000;
+const LISTEN_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 // Cache
 const idsCache = new IDSCache();
@@ -63,35 +57,31 @@ bot.on("message", async (msg) => {
 
     // Set up new interval for messages
     const intervalId = setInterval(async () => {
-      const data = await kufar.getLatestAds();
-      // const data = [];
-      console.log(data.map((item) => ({ date: item.date, price: item.price })));
-      const todayOnly = data.filter((item) => item.date.includes("Сегодня"));
       const sendToday = [];
+      const todayAds = await App.processAds("Сегодня");
+      const messagePromises = [];
 
-      todayOnly.forEach((ad) => {
+      todayAds.forEach((ad) => {
         if (!idsCache.hasString(ad.id)) {
-          bot.sendMessage(
-            chatId,
-            `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
-<b>${ad.date} / ${ad.price}</b>
-<a href="${ad.href}">Объявление ${ad.id}</a>`,
-            {
+          messagePromises.push(
+            bot.sendMessage(chatId, App.getMessageTemplate(ad), {
               parse_mode: PARSE_MODE,
-            },
+            }),
           );
           sendToday.push(ad.id);
           idsCache.addCache(ad.id);
         }
       });
 
-      // if (sendToday.length) {
-      //   bot.sendMessage(
-      //     chatId,
-      //     `Send ${sendToday.length} ads. /stop to cancel. `
-      //   );
-      // }
-    }, 30 * 1000); // 10 minutes in milliseconds 10 * 60 * 1000
+      Promise.all(messagePromises).then(() => {
+        if (sendToday.length) {
+          bot.sendMessage(
+            chatId,
+            `Отправлено ${sendToday.length} объявлений. /stop для остановки мониторинга. `,
+          );
+        }
+      });
+    }, LISTEN_INTERVAL_TEST);
 
     // Store the interval ID
     activeTimers.set(chatId, intervalId);

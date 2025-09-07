@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "kufar:test": "node kufar.js",
-    "kufar:test:watch": "nodemon kufar.js"
+    "kufar:test:watch": "nodemon kufar.js",
+    "cache:test": "node cache.js"
   },
   "author": "Vitali Rusau",
   "license": "ISC",
