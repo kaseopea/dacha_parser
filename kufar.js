@@ -31,4 +31,4 @@ const main = async () => {
     console.log("Найдено элементов " + todayIds.length);
 }
 
-main();
+// main();

@@ -22,6 +22,7 @@ const PARSE_MODE = 'HTML';
 
 // Cache
 const idsCache = new IDSCache();
+idsCache.clearAllNow();
 
 // Middleware
 app.use(express.json());
@@ -40,6 +41,7 @@ bot.onText(/\/start/, (msg) => {
 
 // Handle text messages
 bot.on("message", async (msg) => {
+  // console.log(msg.from.first_name);
   const chatId = msg.chat.id;
   const text = msg.text;
 
@@ -48,12 +50,9 @@ bot.on("message", async (msg) => {
     return;
   }
 
-  // Check if user sent "lessy"
+  // Check if user sent password
   if (text.toLowerCase() === TELEGRAM_BOT_PWD) {
-    bot.sendMessage(
-      chatId,
-      MESSAGES.messageGranted
-    );
+    bot.sendMessage(chatId,MESSAGES.messageGranted);
 
     // Clear any existing timer for this user
     if (activeTimers.has(chatId)) {
@@ -63,14 +62,15 @@ bot.on("message", async (msg) => {
     // Set up new interval for messages
     const intervalId = setInterval(async () => {
       const data = await kufar.getLatestAds();
-      const todayOnly = data.filter((item) => item.date.includes('Вчера'));
+      // const data = [];
+      console.log(data.map(item => ({date: item.date, price: item.price})));
+      const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
       const sendToday = [];
 
       todayOnly.forEach((ad) => {
         if (!idsCache.hasString(ad.id)) {
           bot.sendMessage(chatId, `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
 <b>${ad.date} / ${ad.price}</b>
-<blockquote>${ad.body}</blockquote>
 <a href="${ad.href}">Объявление ${ad.id}</a>`, {
             parse_mode: PARSE_MODE,
           });
@@ -85,7 +85,7 @@ bot.on("message", async (msg) => {
       //     `Send ${sendToday.length} ads. /stop to cancel. `
       //   );
       // }
-    }, 10 * 60 * 1000); // 10 minutes in milliseconds
+    }, 30 * 1000); // 10 minutes in milliseconds 10 * 60 * 1000
 
     // Store the interval ID
     activeTimers.set(chatId, intervalId);
