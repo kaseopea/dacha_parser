@@ -7,10 +7,12 @@ const IDSCache = require("./lib/cache/index");
 
 const MESSAGES = {
   pwdQuestion: "Кто здесь?",
-  messageGranted: "Привет! Проверка каждые 10 мин. Отправь /stop чтобы остановить обновление.",
-  startMessage: "Автоматические сообщения остановлены. Отправь /start чтобы начать снова",
+  messageGranted:
+    "Привет! Проверка каждые 10 мин. Отправь /stop чтобы остановить обновление.",
+  startMessage:
+    "Автоматические сообщения остановлены. Отправь /start чтобы начать снова",
   noActive: "Нет активных сообщений для остановки",
-}
+};
 
 require("dotenv").config();
 
@@ -18,7 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 4040;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_BOT_PWD = process.env.TELEGRAM_BOT_PWD;
-const PARSE_MODE = 'HTML';
+const PARSE_MODE = "HTML";
 
 // Cache
 const idsCache = new IDSCache();
@@ -52,7 +54,7 @@ bot.on("message", async (msg) => {
 
   // Check if user sent password
   if (text.toLowerCase() === TELEGRAM_BOT_PWD) {
-    bot.sendMessage(chatId,MESSAGES.messageGranted);
+    bot.sendMessage(chatId, MESSAGES.messageGranted);
 
     // Clear any existing timer for this user
     if (activeTimers.has(chatId)) {
@@ -63,17 +65,21 @@ bot.on("message", async (msg) => {
     const intervalId = setInterval(async () => {
       const data = await kufar.getLatestAds();
       // const data = [];
-      console.log(data.map(item => ({date: item.date, price: item.price})));
-      const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
+      console.log(data.map((item) => ({ date: item.date, price: item.price })));
+      const todayOnly = data.filter((item) => item.date.includes("Сегодня"));
       const sendToday = [];
 
       todayOnly.forEach((ad) => {
         if (!idsCache.hasString(ad.id)) {
-          bot.sendMessage(chatId, `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
+          bot.sendMessage(
+            chatId,
+            `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
 <b>${ad.date} / ${ad.price}</b>
-<a href="${ad.href}">Объявление ${ad.id}</a>`, {
-            parse_mode: PARSE_MODE,
-          });
+<a href="${ad.href}">Объявление ${ad.id}</a>`,
+            {
+              parse_mode: PARSE_MODE,
+            },
+          );
           sendToday.push(ad.id);
           idsCache.addCache(ad.id);
         }
@@ -99,10 +105,7 @@ bot.onText(/\/stop/, (msg) => {
   if (activeTimers.has(chatId)) {
     clearInterval(activeTimers.get(chatId));
     activeTimers.delete(chatId);
-    bot.sendMessage(
-      chatId,
-      MESSAGES.startMessage
-    );
+    bot.sendMessage(chatId, MESSAGES.startMessage);
   } else {
     bot.sendMessage(chatId, MESSAGES.noActive);
   }
