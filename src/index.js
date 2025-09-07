@@ -1,9 +1,9 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
 
 const MESSAGES = require("./config/messages");
-const IDSCache = require("./lib/cache/index");
+const userCache = require("./lib/cache/user-cache");
+const logger = require("./lib/logger/index");
 const App = require("./app");
 
 require("dotenv").config();
@@ -15,10 +15,6 @@ const TELEGRAM_BOT_PWD = process.env.TELEGRAM_BOT_PWD;
 const PARSE_MODE = "HTML";
 const LISTEN_INTERVAL_TEST = 30 * 1000;
 const LISTEN_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
-
-// Cache
-const idsCache = new IDSCache();
-idsCache.clearAllNow();
 
 // Middleware
 app.use(express.json());
@@ -37,17 +33,24 @@ bot.onText(/\/start/, (msg) => {
 
 // Handle text messages
 bot.on("message", async (msg) => {
-  // console.log(msg.from.first_name);
+  const userId = App.getUserId(
+    msg.from.first_name,
+    msg.from.last_name,
+    msg.from.language_code,
+  );
   const chatId = msg.chat.id;
   const text = msg.text;
 
   // Ignore commands that aren't /start or /stop
   if (text.startsWith("/")) {
     return;
+  } else {
+    logger.info(`${text} message for ${userId}`);
   }
 
   // Check if user sent password
   if (text.toLowerCase() === TELEGRAM_BOT_PWD) {
+    logger.info(`PWD is correct for ${userId}`);
     bot.sendMessage(chatId, MESSAGES.messageGranted);
 
     // Clear any existing timer for this user
@@ -62,14 +65,14 @@ bot.on("message", async (msg) => {
       const messagePromises = [];
 
       todayAds.forEach((ad) => {
-        if (!idsCache.hasString(ad.id)) {
+        if (!userCache.userHasString(userId, ad.id)) {
           messagePromises.push(
             bot.sendMessage(chatId, App.getMessageTemplate(ad), {
               parse_mode: PARSE_MODE,
             }),
           );
           sendToday.push(ad.id);
-          idsCache.addCache(ad.id);
+          userCache.addUserStrings(userId, ad.id);
         }
       });
 
@@ -81,7 +84,7 @@ bot.on("message", async (msg) => {
           );
         }
       });
-    }, LISTEN_INTERVAL_TEST);
+    }, LISTEN_INTERVAL);
 
     // Store the interval ID
     activeTimers.set(chatId, intervalId);
@@ -110,6 +113,11 @@ bot.onText(/\/stop/, (msg) => {
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({ status: "Bot is running", activeUsers: activeTimers.size });
+});
+
+// Health check endpoint
+app.get("/cache", (req, res) => {
+  res.json({ status: "Cache status", cache: userCache.getGlobalStats() });
 });
 
 // Error handling

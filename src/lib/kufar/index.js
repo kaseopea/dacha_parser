@@ -1,6 +1,8 @@
 const puppeteer = require("puppeteer");
 const cheerio = require("cheerio");
 
+const logger = require("../logger/index");
+
 const BASE_URL =
   "https://re.kufar.by/l/gomelskij-rajon/kupit/dom?cur=USD&gtsy=country-belarus~province-gomelskaja_oblast~area-gomelskij_rajon";
 
@@ -12,9 +14,14 @@ const extractId = (href) => {
 
 module.exports = {
   getLatestAds: async () => {
+    logger.info("Kufar Ads: Start processing");
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
-    await page.goto(BASE_URL, { waitUntil: "networkidle2" });
+
+    await page.goto(BASE_URL, {
+      waitUntil: "networkidle2",
+      timeout: 3 * 60 * 1000, // 3 mins
+    });
     const content = await page.content();
     const $ = cheerio.load(content);
     const data = [];
@@ -36,6 +43,8 @@ module.exports = {
       });
 
     await browser.close();
+
+    logger.info(`Kufar Ads: Got ${data.length} items`);
 
     return data;
   },

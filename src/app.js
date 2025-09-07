@@ -1,11 +1,16 @@
 const kufar = require("./lib/kufar/index");
+const logger = require("./lib/logger/index");
 
 const processAds = async (filterBy) => {
+  logger.info("Ads Processing: Start");
   const data = await kufar.getLatestAds();
 
-  console.log(data.map((item) => ({ date: item.date, price: item.price })));
-
   const todayOnly = data.filter((item) => item.date.includes(filterBy));
+  // .map((item) => ({ date: item.date, price: item.price }))
+  logger.info(
+    `Ads Processing: Найдено ${todayOnly.length} объявлений за ${filterBy}`,
+  );
+
   return todayOnly;
 };
 
@@ -15,7 +20,19 @@ const getMessageTemplate = (ad) => {
 <a href="${ad.href}">Объявление</a>`;
 };
 
+const cleanString = (str) => {
+  if (!str) {
+    return "";
+  }
+  return str.toLowerCase().trim().replace(/\s/g, "");
+};
+
+const getUserId = (firstname, lastname, languageCode) => {
+  return `${cleanString(firstname)}_${cleanString(lastname)}_${cleanString(languageCode)}`;
+};
+
 module.exports = {
   processAds,
   getMessageTemplate,
+  getUserId,
 };
