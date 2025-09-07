@@ -1,16 +1,10 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
 
-const kufar = require("./lib/kufar/index");
-const IDSCache = require("./lib/cache/index");
-
-const MESSAGES = {
-  pwdQuestion: "Кто здесь?",
-  messageGranted: "Привет! Проверка каждые 10 мин. Отправь /stop чтобы остановить обновление.",
-  startMessage: "Автоматические сообщения остановлены. Отправь /start чтобы начать снова",
-  noActive: "Нет активных сообщений для остановки",
-}
+const MESSAGES = require("./config/messages");
+const userCache = require("./lib/cache/user-cache");
+const logger = require("./lib/logger/index");
+const App = require("./app");
 
 require("dotenv").config();
 
@@ -18,11 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 4040;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_BOT_PWD = process.env.TELEGRAM_BOT_PWD;
-const PARSE_MODE = 'HTML';
-
-// Cache
-const idsCache = new IDSCache();
-idsCache.clearAllNow();
+const PARSE_MODE = "HTML";
+const LISTEN_INTERVAL_TEST = 30 * 1000;
+const LISTEN_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 // Middleware
 app.use(express.json());
@@ -41,18 +33,25 @@ bot.onText(/\/start/, (msg) => {
 
 // Handle text messages
 bot.on("message", async (msg) => {
-  // console.log(msg.from.first_name);
+  const userId = App.getUserId(
+    msg.from.first_name,
+    msg.from.last_name,
+    msg.from.language_code,
+  );
   const chatId = msg.chat.id;
   const text = msg.text;
 
   // Ignore commands that aren't /start or /stop
   if (text.startsWith("/")) {
     return;
+  } else {
+    logger.info(`${text} message for ${userId}`);
   }
 
   // Check if user sent password
   if (text.toLowerCase() === TELEGRAM_BOT_PWD) {
-    bot.sendMessage(chatId,MESSAGES.messageGranted);
+    logger.info(`PWD is correct for ${userId}`);
+    bot.sendMessage(chatId, MESSAGES.messageGranted);
 
     // Clear any existing timer for this user
     if (activeTimers.has(chatId)) {
@@ -61,31 +60,31 @@ bot.on("message", async (msg) => {
 
     // Set up new interval for messages
     const intervalId = setInterval(async () => {
-      const data = await kufar.getLatestAds();
-      // const data = [];
-      console.log(data.map(item => ({date: item.date, price: item.price})));
-      const todayOnly = data.filter((item) => item.date.includes('Сегодня'));
       const sendToday = [];
+      const todayAds = await App.processAds("Сегодня");
+      const messagePromises = [];
 
-      todayOnly.forEach((ad) => {
-        if (!idsCache.hasString(ad.id)) {
-          bot.sendMessage(chatId, `<tg-emoji emoji-id="5368324170671202286">👍</tg-emoji> ${ad.parameters}
-<b>${ad.date} / ${ad.price}</b>
-<a href="${ad.href}">Объявление ${ad.id}</a>`, {
-            parse_mode: PARSE_MODE,
-          });
+      todayAds.forEach((ad) => {
+        if (!userCache.userHasString(userId, ad.id)) {
+          messagePromises.push(
+            bot.sendMessage(chatId, App.getMessageTemplate(ad), {
+              parse_mode: PARSE_MODE,
+            }),
+          );
           sendToday.push(ad.id);
-          idsCache.addCache(ad.id);
+          userCache.addUserStrings(userId, ad.id);
         }
       });
 
-      // if (sendToday.length) {
-      //   bot.sendMessage(
-      //     chatId,
-      //     `Send ${sendToday.length} ads. /stop to cancel. `
-      //   );
-      // }
-    }, 30 * 1000); // 10 minutes in milliseconds 10 * 60 * 1000
+      Promise.all(messagePromises).then(() => {
+        if (sendToday.length) {
+          bot.sendMessage(
+            chatId,
+            `Отправлено ${sendToday.length} объявлений. /stop для остановки мониторинга. `,
+          );
+        }
+      });
+    }, LISTEN_INTERVAL);
 
     // Store the interval ID
     activeTimers.set(chatId, intervalId);
@@ -99,10 +98,7 @@ bot.onText(/\/stop/, (msg) => {
   if (activeTimers.has(chatId)) {
     clearInterval(activeTimers.get(chatId));
     activeTimers.delete(chatId);
-    bot.sendMessage(
-      chatId,
-      MESSAGES.startMessage
-    );
+    bot.sendMessage(chatId, MESSAGES.startMessage);
   } else {
     bot.sendMessage(chatId, MESSAGES.noActive);
   }
@@ -117,6 +113,11 @@ bot.onText(/\/stop/, (msg) => {
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({ status: "Bot is running", activeUsers: activeTimers.size });
+});
+
+// Health check endpoint
+app.get("/cache", (req, res) => {
+  res.json({ status: "Cache status", cache: userCache.getGlobalStats() });
 });
 
 // Error handling

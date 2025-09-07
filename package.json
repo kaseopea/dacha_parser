@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "kufar:test": "node kufar.js",
-    "kufar:test:watch": "nodemon kufar.js"
+    "kufar:test:watch": "nodemon kufar.js",
+    "cache:test": "node cache.js"
   },
   "author": "Vitali Rusau",
   "license": "ISC",
@@ -21,9 +22,12 @@
     "express": "^5.1.0",
     "node-cache": "^5.1.2",
     "node-telegram-bot-api": "^0.66.0",
+    "pino": "^9.9.4",
+    "pino-pretty": "^13.1.1",
     "puppeteer": "^24.19.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "prettier": "3.6.2"
   }
 }
